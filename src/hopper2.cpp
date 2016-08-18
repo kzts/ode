@@ -31,12 +31,12 @@
 #define dsDrawCapsule  dsDrawCapsuleD
 #endif
 
-dWorldID world;  // 動力学計算用ワールド
-dSpaceID space;  // 衝突検出用スペース
-dGeomID  ground; // 地面
-dJointGroupID contactgroup; // コンタクトグループ
+dWorldID world;  // dynamic simulation world
+dSpaceID space;  // contact dection space
+dGeomID  ground; // ground
+dJointGroupID contactgroup; // contact group
 dReal r = 0.2, m  = 1.0;
-dsFunctions fn;
+dsFunctions fn; // draw function of drawn stuff
 
 typedef struct {       // MyObject構造体
   dBodyID body;        // ボディ(剛体)のID番号（動力学計算用）
@@ -49,6 +49,70 @@ static dJointID h_joint,s_joint; // ヒンジ, スライダー
 static int STEPS = 0;            // シミュレーションのステップ数
 static dReal S_LENGTH = 0.0;     // スライダー長
 static dReal H_ANGLE  = 0.0;     // ヒンジ角
+
+/*
+typedef struct {
+  dBodyID body;                        // ボディのID番号
+  dGeomID geom;                        // ジオメトリのID番号
+} MyObject;                            // MyObject構造体
+*/
+
+#define  NUM 4                          // link number
+MyObject rlink[NUM];                   // number
+dReal    THETA[NUM] = {0.0};             // joint target angle [rad]
+dJointID joint[NUM]; // joint ID number
+
+// make the arm
+void  makeArm()
+{
+  dMass mass;                                    // 質量パラメータ
+  dReal x[NUM]      = {0.00, 0.00, 0.00, 0.00};  // 重心 x
+  dReal y[NUM]      = {0.00, 0.00, 0.00, 0.00};  // 重心 y
+  dReal z[NUM]      = {0.05, 0.50, 1.50, 2.50};  // 重心 z
+  dReal length[NUM] = {0.10, 0.90, 1.00, 1.00};  // 長さ
+  dReal weight[NUM] = {9.00, 2.00, 2.00, 2.00};  // 質量
+  dReal r[NUM]      = {0.20, 0.04, 0.04, 0.04};  // 半径
+  dReal c_x[NUM]    = {0.00, 0.00, 0.00, 0.00};  // 関節中心点 x
+  dReal c_y[NUM]    = {0.00, 0.00, 0.00, 0.00};  // 関節中心点 y
+  dReal c_z[NUM]    = {0.00, 0.10, 1.00, 2.00};  // 関節中心点 z
+  dReal axis_x[NUM] = {0, 0, 0, 0};              // 関節回転軸 x
+  dReal axis_y[NUM] = {0, 0, 1, 1};              // 関節回転軸 y
+  dReal axis_z[NUM] = {1, 1, 0, 0};              // 関節回転軸 z
+  
+  // make links
+  for (int i = 0; i < NUM; i++) {
+    rlink[i].body = dBodyCreate(world);
+    dBodySetPosition(rlink[i].body, x[i], y[i], z[i]);
+    dMassSetZero(&mass);
+    dMassSetCapsuleTotal(&mass,weight[i],3,r[i],length[i]);
+    dBodySetMass(rlink[i].body, &mass);
+    rlink[i].geom = dCreateCapsule(space,r[i],length[i]);
+    dGeomSetBody(rlink[i].geom,rlink[i].body);
+  }
+
+  // make joints, attach them to links
+  joint[0] = dJointCreateFixed(world, 0);  // fixed joint
+  dJointAttach(joint[0], rlink[0].body, 0);
+  dJointSetFixed(joint[0]);
+  for (int j = 1; j < NUM; j++) {
+    joint[j] = dJointCreateHinge(world, 0); // hinge
+    dJointAttach(joint[j], rlink[j].body, rlink[j-1].body);
+    dJointSetHingeAnchor(joint[j], c_x[j], c_y[j], c_z[j]);
+    dJointSetHingeAxis(joint[j], axis_x[j], axis_y[j],axis_z[j]);
+  }
+}
+
+// draw arm
+void drawArm()
+{
+   dReal r,length;
+
+   for (int i = 0; i < NUM; i++ ) {       // カプセルの描画
+     dGeomCapsuleGetParams(rlink[i].geom, &r,&length);
+     dsDrawCapsule(dBodyGetPosition(rlink[i].body),
+     dBodyGetRotation(rlink[i].body),length,r);
+   }
+}
 
 // 衝突検出計算
 static void nearCallback(void *data, dGeomID o1, dGeomID o2)
@@ -79,6 +143,7 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2)
   }
 }
 
+/*
 // ロボットの描画
 static void drawMonoBot()
 {
@@ -130,6 +195,7 @@ static void controlSlider(dReal target)
   dJointSetSliderParam(s_joint, dParamFMax, max_force);
 }
 
+
 // create the robot
 void createMonoBot() {
   dMass mass;
@@ -176,8 +242,19 @@ void createMonoBot() {
   dJointSetSliderParam(s_joint, dParamLoStop, -0.25);
   dJointSetSliderParam(s_joint, dParamHiStop,  0.25);
 }
+*/
 
+// destroy the robot
+void destroyArm()
+{
+  for (int i = 0; i < NUM; i++) {
+    dJointDestroy(joint[i]);   // destroy joint 
+    dBodyDestroy(rlink[i].body); // 胴体のボディを破壊
+    dGeomDestroy(rlink[i].geom); // 胴体のジオメトリを破壊
+  }
+}
 
+/*
 // destroy the robot
 void destroyMonoBot()
 {
@@ -191,6 +268,20 @@ void destroyMonoBot()
     dGeomDestroy(leg[i].geom);  // 脚のジオメトリを破壊
   }
 }
+*/
+
+ // P control
+void Pcontrol()
+{
+  dReal k =  10.0, fMax = 100.0;                   // 比例ゲイン，最大トルク
+
+  for (int j = 1; j < NUM; j++) {
+    dReal tmp = dJointGetHingeAngle(joint[j]);     // 関節角の取得
+    dReal z = THETA[j] - tmp;                      // 残差
+    dJointSetHingeParam(joint[j],dParamVel, k*z);  // 角速度の設定
+    dJointSetHingeParam(joint[j],dParamFMax,fMax); // トルクの設定
+  }
+}
 
 // simulation restart
 static void restart()
@@ -199,24 +290,28 @@ static void restart()
   S_LENGTH = 0.0;    // スライダ長の初期化
   H_ANGLE  = 0.0;    // ヒンジ角度の初期化
 
-  destroyMonoBot();  // ロボットの破壊
+  //destroyMonoBot();  // ロボットの破壊
+  destroyArm(); // destroy arm
   dJointGroupDestroy(contactgroup);     // ジョイントグループの破壊
   contactgroup = dJointGroupCreate(0);  // ジョイントグループの生成
-  createMonoBot();                      // ロボットの生成
+  //createMonoBot();                      // ロボットの生成
+  makeArm();
 }
 
 // simulation loop
 static void simLoop(int pause)
 {
+  /*
   if (S_LENGTH >=  0.25) S_LENGTH =   0.25;
   if (S_LENGTH <= -0.25) S_LENGTH =  -0.25;
   if (H_ANGLE  >   M_PI) H_ANGLE  =  -M_PI;
   if (H_ANGLE  <  -M_PI) H_ANGLE  =   M_PI;
-
+  */
   if (!pause) {
     STEPS++;
-    controlSlider(S_LENGTH);
-    controlHinge(H_ANGLE);
+    //controlSlider(S_LENGTH);
+    //controlHinge(H_ANGLE);
+    Pcontrol();
     dSpaceCollide(space,0,&nearCallback);
     dWorldStep(world,0.01);
     dJointGroupEmpty(contactgroup);
@@ -224,90 +319,15 @@ static void simLoop(int pause)
     printf("%d\n",STEPS);
     //std::cout << STEPS << std::endl;
 
-    if (STEPS > 200){
+    if (STEPS > 100){
       STEPS = 0;
       restart();
     }
     
   }
-  drawMonoBot(); // ロボットの描画
+  //drawMonoBot(); // ロボットの描画
+  drawArm(); // draw robot
 }
-
-/*
-// ロボットの生成
-void createMonoBot() {
-  dMass mass;
-  dReal x0 = 0.0, y0 = 0.0, z0 = 1.5;
-
-  // 胴体(球）
-  torso.r    = 0.25;
-  torso.m    = 14.0;
-  torso.body = dBodyCreate(world);
-  dMassSetZero(&mass);
-  dMassSetSphereTotal(&mass,torso.m,torso.r);
-  dBodySetMass(torso.body,&mass);
-  dBodySetPosition(torso.body, x0, y0, z0);
-  torso.geom = dCreateSphere(space,torso.r);
-  dGeomSetBody(torso.geom,torso.body);
-
-  // 脚(円柱)
-  leg[0].l = 0.75;  leg[1].l = 0.75;    // 長さ
-  leg[0].r = 0.05;  leg[1].r = 0.03;    // 半径
-  for (int i = 0; i < 2; i++) {
-    leg[i].m   = 3.0;
-    leg[i].body   = dBodyCreate(world);
-    dMassSetZero(&mass);
-    dMassSetCapsuleTotal(&mass,leg[i].m,3,leg[i].r,leg[i].l);
-    dBodySetMass(leg[i].body,&mass);
-    if (i == 0)
-      dBodySetPosition(leg[i].body, x0, y0, z0-0.5*leg[0].l);
-    else
-      dBodySetPosition(leg[i].body, x0, y0, z0-0.5*leg[0].l-0.5);
-    leg[i].geom = dCreateCapsule(space,leg[i].r,leg[i].l);
-    dGeomSetBody(leg[i].geom,leg[i].body);
-  }
-
-  // ヒンジジョイント
-  h_joint = dJointCreateHinge(world, 0);
-  dJointAttach(h_joint, torso.body,leg[0].body);
-  dJointSetHingeAnchor(h_joint, x0, y0, z0);
-  dJointSetHingeAxis(h_joint, 1, 0, 0);
-
-  // スライダージョイント
-  s_joint = dJointCreateSlider(world, 0);
-  dJointAttach(s_joint, leg[0].body,leg[1].body);
-  dJointSetSliderAxis(s_joint, 0, 0, 1);
-  dJointSetSliderParam(s_joint, dParamLoStop, -0.25);
-  dJointSetSliderParam(s_joint, dParamHiStop,  0.25);
-}
-
-// ロボットの破壊
-void destroyMonoBot()
-{
-	dJointDestroy(h_joint);   // ヒンジ
-  dJointDestroy(s_joint);   // スライダー
-  dBodyDestroy(torso.body); // 胴体のボディを破壊
-  dGeomDestroy(torso.geom); // 胴体のジオメトリを破壊
-
-  for (int i = 0; i < 2; i++) {
-    dBodyDestroy(leg[i].body);  // 脚のボディを破壊
-    dGeomDestroy(leg[i].geom);  // 脚のジオメトリを破壊
-  }
-}
-
-// シミュレーションの再スタート
-static void restart()
-{
-  STEPS    = 0;      // ステップ数の初期化
-  S_LENGTH = 0.0;    // スライダ長の初期化
-  H_ANGLE  = 0.0;    // ヒンジ角度の初期化
-
-  destroyMonoBot();  // ロボットの破壊
-  dJointGroupDestroy(contactgroup);     // ジョイントグループの破壊
-  contactgroup = dJointGroupCreate(0);  // ジョイントグループの生成
-  createMonoBot();                      // ロボットの生成
-}
-*/
 
 // キー操作
 static void command(int cmd)
@@ -360,7 +380,8 @@ int main (int argc, char *argv[])
   dWorldSetERP(world, 0.9);          // ERPの設定
   dWorldSetCFM(world, 1e-4);         // CFMの設定
   ground = dCreatePlane(space, 0, 0, 1, 0);
-  createMonoBot();
+  //createMonoBot();
+  makeArm();
 
   dsSimulationLoop (argc, argv, 640, 480, &fn);
 
