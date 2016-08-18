@@ -18,6 +18,8 @@
 #include <drawstuff/drawstuff.h>
 #include "texturepath.h"
 
+//using namespace std;
+
 #ifdef _MSC_VER
 #pragma warning(disable:4244 4305)  // for VC++, no precision loss complaints
 #endif
@@ -128,8 +130,82 @@ static void controlSlider(dReal target)
   dJointSetSliderParam(s_joint, dParamFMax, max_force);
 }
 
+// create the robot
+void createMonoBot() {
+  dMass mass;
+  dReal x0 = 0.0, y0 = 0.0, z0 = 1.5;
 
-// シミュレーションループ
+  // 胴体(球）
+  torso.r    = 0.25;
+  torso.m    = 14.0;
+  torso.body = dBodyCreate(world);
+  dMassSetZero(&mass);
+  dMassSetSphereTotal(&mass,torso.m,torso.r);
+  dBodySetMass(torso.body,&mass);
+  dBodySetPosition(torso.body, x0, y0, z0);
+  torso.geom = dCreateSphere(space,torso.r);
+  dGeomSetBody(torso.geom,torso.body);
+
+  // 脚(円柱)
+  leg[0].l = 0.75;  leg[1].l = 0.75;    // 長さ
+  leg[0].r = 0.05;  leg[1].r = 0.03;    // 半径
+  for (int i = 0; i < 2; i++) {
+    leg[i].m   = 3.0;
+    leg[i].body   = dBodyCreate(world);
+    dMassSetZero(&mass);
+    dMassSetCapsuleTotal(&mass,leg[i].m,3,leg[i].r,leg[i].l);
+    dBodySetMass(leg[i].body,&mass);
+    if (i == 0)
+      dBodySetPosition(leg[i].body, x0, y0, z0-0.5*leg[0].l);
+    else
+      dBodySetPosition(leg[i].body, x0, y0, z0-0.5*leg[0].l-0.5);
+    leg[i].geom = dCreateCapsule(space,leg[i].r,leg[i].l);
+    dGeomSetBody(leg[i].geom,leg[i].body);
+  }
+
+  // ヒンジジョイント
+  h_joint = dJointCreateHinge(world, 0);
+  dJointAttach(h_joint, torso.body,leg[0].body);
+  dJointSetHingeAnchor(h_joint, x0, y0, z0);
+  dJointSetHingeAxis(h_joint, 1, 0, 0);
+
+  // スライダージョイント
+  s_joint = dJointCreateSlider(world, 0);
+  dJointAttach(s_joint, leg[0].body,leg[1].body);
+  dJointSetSliderAxis(s_joint, 0, 0, 1);
+  dJointSetSliderParam(s_joint, dParamLoStop, -0.25);
+  dJointSetSliderParam(s_joint, dParamHiStop,  0.25);
+}
+
+
+// destroy the robot
+void destroyMonoBot()
+{
+  dJointDestroy(h_joint);   // ヒンジ
+  dJointDestroy(s_joint);   // スライダー
+  dBodyDestroy(torso.body); // 胴体のボディを破壊
+  dGeomDestroy(torso.geom); // 胴体のジオメトリを破壊
+
+  for (int i = 0; i < 2; i++) {
+    dBodyDestroy(leg[i].body);  // 脚のボディを破壊
+    dGeomDestroy(leg[i].geom);  // 脚のジオメトリを破壊
+  }
+}
+
+// simulation restart
+static void restart()
+{
+  STEPS    = 0;      // ステップ数の初期化
+  S_LENGTH = 0.0;    // スライダ長の初期化
+  H_ANGLE  = 0.0;    // ヒンジ角度の初期化
+
+  destroyMonoBot();  // ロボットの破壊
+  dJointGroupDestroy(contactgroup);     // ジョイントグループの破壊
+  contactgroup = dJointGroupCreate(0);  // ジョイントグループの生成
+  createMonoBot();                      // ロボットの生成
+}
+
+// simulation loop
 static void simLoop(int pause)
 {
   if (S_LENGTH >=  0.25) S_LENGTH =   0.25;
@@ -144,10 +220,20 @@ static void simLoop(int pause)
     dSpaceCollide(space,0,&nearCallback);
     dWorldStep(world,0.01);
     dJointGroupEmpty(contactgroup);
+
+    printf("%d\n",STEPS);
+    //std::cout << STEPS << std::endl;
+
+    if (STEPS > 200){
+      STEPS = 0;
+      restart();
+    }
+    
   }
   drawMonoBot(); // ロボットの描画
 }
 
+/*
 // ロボットの生成
 void createMonoBot() {
   dMass mass;
@@ -221,6 +307,7 @@ static void restart()
   contactgroup = dJointGroupCreate(0);  // ジョイントグループの生成
   createMonoBot();                      // ロボットの生成
 }
+*/
 
 // キー操作
 static void command(int cmd)
@@ -251,6 +338,12 @@ void setDrawStuff()           /*** 描画関数の設定 ***/
   fn.step    = &simLoop;      // simLoop関数のポインタ
   fn.command = &command;      // キー入力関数へのポインタ
   fn.path_to_textures = "../../drawstuff/textures"; // テクスチャ
+  //printf("%d\n",STEPS);
+
+  //if (STEPS > 200){
+  //STEPS = 0;
+  //restart();
+  //}
 }
 
 
