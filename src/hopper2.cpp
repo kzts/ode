@@ -25,7 +25,7 @@ dsFunctions fn; // draw function of drawn stuff
 typedef struct {       // MyObject構造体
   dBodyID body;        // ボディ(剛体)のID番号（動力学計算用）
   dGeomID geom;        // ジオメトリのID番号(衝突検出計算用）
-  double  l,r,m;       // 長さ[m], 半径[m]，質量[kg]
+  double  l,r,m;       // length [m], radius [m], weight [kg]
 } MyObject;
 
 static int STEPS = 0; // simulation step number
@@ -34,13 +34,13 @@ static int STEPS = 0; // simulation step number
 MyObject rlink[NUM];  // number
 dJointID joint[NUM]; // joint ID number
 
-// make the arm
-void  makeArm()
+// make the leg
+void  makeLeg()
 {
   dMass mass; // mass parameter
   dMatrix3 R;
   dReal length[NUM] = {0.20, 0.30, 0.30, 0.50}; 
-  dReal weight[NUM] = {0.50, 1.00, 1.00, 3.00};
+  dReal weight[NUM] = {0.40, 0.80, 0.80, 3.60};
   dReal r[NUM]      = {0.02, 0.02, 0.02, 0.02}; // radius
   dReal axis_x = 0; // joint axis x 
   dReal axis_y = 1; // joint axis y 
@@ -50,7 +50,8 @@ void  makeArm()
   dReal c_x[NUM], c_y[NUM], c_z[NUM];   
 
   dReal Pi = 3.14159;
-  dReal theta[NUM] = { Pi, Pi/6.0, 5.0*Pi/6.0, Pi/3.0}; 
+  //dReal theta[NUM] = { Pi, Pi/6.0, 5.0*Pi/6.0, Pi/3.0}; 
+  dReal theta[NUM] = { Pi, Pi/6.0, 5.0*Pi/6.0, Pi/6.0}; 
 
   c_x[0] = 0; c_y[0] = 0; c_z[0] = 1.2* r[0] + 0.5* length[0]* sin(theta[0]);
 
@@ -77,19 +78,25 @@ void  makeArm()
     dGeomSetBody( rlink[i].geom, rlink[i].body);
   }
 
-  joint[0] = dJointCreateHinge( world, 0); // hinge
+  //joint[0] = dJointCreateHinge( world, 0); // hinge
 
-  for (int j = 1; j < NUM; j++) {
+  //for (int j = 1; j < NUM; j++) {
+  for (int j = 0; j < NUM; j++) {
     joint[j] = dJointCreateHinge( world, 0); // hinge
-    dJointAttach( joint[j], rlink[j].body, rlink[j-1].body);
+    //dJointAttach( joint[j], rlink[j].body, rlink[j-1].body);
+    if ( j > 0)
+      dJointAttach( joint[j], rlink[j].body, rlink[j-1].body);
+    //else
+    //dJointAttach( joint[j], rlink[j].body, rlink[j].body);
+
     dJointSetHingeAnchor( joint[j], c_x[j], c_y[j], c_z[j]);
     dJointSetHingeAxis( joint[j], axis_x, axis_y, axis_z);
   }
 
 }
 
-// draw arm
-void drawArm()
+// draw leg
+void drawLeg()
 {
    dReal r,length;
    for (int i = 0; i < NUM; i++ ) { // draw capsule
@@ -127,8 +134,8 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2)
   }
 }
 
-void destroyArm()
-// destroy the arm
+void destroyLeg()
+// destroy the leg
 {
   for (int i = 0; i < NUM; i++) {
     dJointDestroy(joint[i]);     // destroy joint 
@@ -137,30 +144,46 @@ void destroyArm()
   }
 }
 
-/*
-void Pcontrol()
-// P control
+void AddTorque()
 {
-  dReal k =  10.0, fMax = 100.0;                   // 比例ゲイン，最大トルク
+  dReal Torque_ank = - 5.0;
+  dReal Torque_kne = + 5.0;
+  dReal Torque_hip = - 5.0;
 
-  //for (int j = 1; j < NUM; j++) {
-  for (int j = 1; j < NUM_j; j++) {
-    dReal tmp = dJointGetHingeAngle(joint[j]);     // 関節角の取得
-    dReal z = THETA[j] - tmp;                      // 残差
-    dJointSetHingeParam(joint[j],dParamVel, k*z);  // 角速度の設定
-    dJointSetHingeParam(joint[j],dParamFMax,fMax); // トルクの設定
+  dJointAddHingeTorque( joint[1], Torque_ank);
+  dJointAddHingeTorque( joint[2], Torque_kne);
+  dJointAddHingeTorque( joint[3], Torque_hip);
+
+  //double q0, q1, q2, q3;
+  double q[NUM];
+  for (int i = 0; i < NUM; i++) {
+    q[i] =  dJointGetHingeAngle( joint[i]);
   }
+  //q0 =  dJointGetHingeAngle( joint[0]);
+  //q1 =  dJointGetHingeAngle( joint[1]);
+  //q2 =  dJointGetHingeAngle( joint[2]);
+  //q3 =  dJointGetHingeAngle( joint[3]);
+
+  const dReal *p = dBodyGetPosition( rlink[0].body);
+  //const dReal *p0 = dBodyGetPosition( rlink[0].body);
+  //const dReal *p1 = dBodyGetPosition( rlink[1].body);
+  //const dReal *p2 = dBodyGetPosition( rlink[2].body);
+  //const dReal *p3 = dBodyGetPosition( rlink[3].body);
+
+  //printf( "%lf\t%lf\t%lf\n", p1, p2, p3);
+  //printf( "%lf\t %lf\t %lf\t %lf\t %lf\t %lf\t %lf\n", q0, q1, q2, q3, p0[0], p0[1], p0[2]);
+  printf( "%lf\t %lf\t %lf\t %lf\t %lf\t %lf\t %lf\n", q[0], q[1], q[2], q[3], p[0], p[1], p[2]);
 }
-*/
+
 static void restart()
 // simulation restart
 {
   STEPS    = 0;                        // initialize step number
 
-  destroyArm();                        // destroy arm
+  destroyLeg();                        // destroy the leg
   dJointGroupDestroy(contactgroup);    // destroy joint group
   contactgroup = dJointGroupCreate(0); // create joint group
-  makeArm();                           // make robot
+  makeLeg();                           // make the leg
 }
 
 // simulation loop
@@ -169,20 +192,22 @@ static void simLoop(int pause)
   if (!pause) {
     STEPS++;
     //Pcontrol();
+    AddTorque();
     dSpaceCollide(space,0,&nearCallback);
-    dWorldStep(world,0.01);
+    //dWorldStep(world,0.01);
+    dWorldStep(world,0.001);
     dJointGroupEmpty(contactgroup);
 
     //printf("%d\n",STEPS);
 
-    if (STEPS > 50){
+    if (STEPS > 1000){
     //if (STEPS > 10000){
       STEPS = 0;
       restart();
     }
     
   }
-  drawArm(); // draw robot
+  drawLeg(); // draw the leg
 }
 
 static void start()
@@ -213,11 +238,11 @@ int main (int argc, char *argv[])
   space        = dHashSpaceCreate(0);
   contactgroup = dJointGroupCreate(0);
 
-  dWorldSetGravity(world, 0,0, -9.8);
-  dWorldSetERP(world, 0.9);          // ERP setting
-  dWorldSetCFM(world, 1e-4);         // CFM setting
-  ground = dCreatePlane(space, 0, 0, 1, 0);
-  makeArm();
+  dWorldSetGravity( world, 0,0, -9.8);      // set gravity
+  dWorldSetERP( world, 0.9);                // set ERP
+  dWorldSetCFM( world, 1e-4);               // set CFM
+  ground = dCreatePlane(space, 0, 0, 1, 0); // set ground
+  makeLeg();                                // set the leg
 
   dsSimulationLoop (argc, argv, 640, 480, &fn);
 
