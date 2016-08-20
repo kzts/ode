@@ -32,7 +32,7 @@ static int STEPS = 0; // simulation step number
 
 #define  NUM 4        // link number
 MyObject rlink[NUM];  // number
-dJointID joint[NUM]; // joint ID number
+dJointID joint[NUM];  // joint ID number
 
 // make the leg
 void  makeLeg()
@@ -134,8 +134,7 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2)
   }
 }
 
-void destroyLeg()
-// destroy the leg
+void destroyLeg() // destroy the leg
 {
   for (int i = 0; i < NUM; i++) {
     dJointDestroy(joint[i]);     // destroy joint 
@@ -154,29 +153,16 @@ void AddTorque()
   dJointAddHingeTorque( joint[2], Torque_kne);
   dJointAddHingeTorque( joint[3], Torque_hip);
 
-  //double q0, q1, q2, q3;
   double q[NUM];
   for (int i = 0; i < NUM; i++) {
     q[i] =  dJointGetHingeAngle( joint[i]);
   }
-  //q0 =  dJointGetHingeAngle( joint[0]);
-  //q1 =  dJointGetHingeAngle( joint[1]);
-  //q2 =  dJointGetHingeAngle( joint[2]);
-  //q3 =  dJointGetHingeAngle( joint[3]);
-
   const dReal *p = dBodyGetPosition( rlink[0].body);
-  //const dReal *p0 = dBodyGetPosition( rlink[0].body);
-  //const dReal *p1 = dBodyGetPosition( rlink[1].body);
-  //const dReal *p2 = dBodyGetPosition( rlink[2].body);
-  //const dReal *p3 = dBodyGetPosition( rlink[3].body);
 
-  //printf( "%lf\t%lf\t%lf\n", p1, p2, p3);
-  //printf( "%lf\t %lf\t %lf\t %lf\t %lf\t %lf\t %lf\n", q0, q1, q2, q3, p0[0], p0[1], p0[2]);
   printf( "%lf\t %lf\t %lf\t %lf\t %lf\t %lf\t %lf\n", q[0], q[1], q[2], q[3], p[0], p[1], p[2]);
 }
 
-static void restart()
-// simulation restart
+static void restart() // simulation restart
 {
   STEPS    = 0;                        // initialize step number
 
@@ -186,12 +172,10 @@ static void restart()
   makeLeg();                           // make the leg
 }
 
-// simulation loop
-static void simLoop(int pause)
+static void simLoop(int pause) // simulation loop
 {
   if (!pause) {
     STEPS++;
-    //Pcontrol();
     AddTorque();
     dSpaceCollide(space,0,&nearCallback);
     //dWorldStep(world,0.01);
@@ -227,7 +211,6 @@ void setDrawStuff()
   fn.step    = &simLoop;      // simLoop関数のポインタ
   fn.path_to_textures = "../../drawstuff/textures"; // texture path
 }
-
 
 int main (int argc, char *argv[])
 {
