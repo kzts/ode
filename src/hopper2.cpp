@@ -1,8 +1,13 @@
+#include <stdio.h>
 #include <ode/ode.h>
 #include <drawstuff/drawstuff.h>
 #include "texturepath.h"
+#include <iostream>
+#include <fstream>
+#include <time.h>
+#include <sys/time.h>
 
-//using namespace std;
+using namespace std;
 
 #ifdef _MSC_VER
 #pragma warning(disable:4244 4305)  // for VC++, no precision loss complaints
@@ -20,12 +25,12 @@ dSpaceID space;  // contact dection space
 dGeomID  ground; // ground
 dJointGroupID contactgroup; // contact group
 dReal r = 0.2, m  = 1.0;
-dsFunctions fn; // draw function of drawn stuff
+dsFunctions fn;  // draw function of drawn stuff
 
-typedef struct {       // MyObject構造体
-  dBodyID body;        // ボディ(剛体)のID番号（動力学計算用）
-  dGeomID geom;        // ジオメトリのID番号(衝突検出計算用）
-  double  l,r,m;       // length [m], radius [m], weight [kg]
+typedef struct { // MyObject structure
+  dBodyID body;  // ID number of (rigid) body (for dynamical simulations)
+  dGeomID geom;  // ID number of geometry (for collision detection)
+  double  l,r,m; // length [m], radius [m], weight [kg]
 } MyObject;
 
 static int STEPS = 0; // simulation step number
@@ -34,10 +39,23 @@ static int STEPS = 0; // simulation step number
 MyObject rlink[NUM];  // number
 dJointID joint[NUM];  // joint ID number
 
+dReal Pi = 3.14159;
+
 #define XYZ 3
 #define Num_t 1000
 double Angle_data[Num_t][NUM];
 double Position_data[Num_t][XYZ];
+
+char filename_o[999];
+char filename_m[999];
+
+//double jointTorque[NUM];
+dReal jointTorque[NUM];
+unsigned int DirName;
+
+//dReal Torque_ank = - 5.0;
+//dReal Torque_kne = + 5.0;
+//dReal Torque_hip = - 5.0;
 
 // make the leg
 void  makeLeg()
@@ -53,9 +71,6 @@ void  makeLeg()
 
   dReal x[NUM], y[NUM], z[NUM];  
   dReal c_x[NUM], c_y[NUM], c_z[NUM];   
-
-  dReal Pi = 3.14159;
-  //dReal theta[NUM] = { Pi, Pi/6.0, 5.0*Pi/6.0, Pi/3.0}; 
   dReal theta[NUM] = { Pi, Pi/6.0, 5.0*Pi/6.0, Pi/6.0}; 
 
   c_x[0] = 0; c_y[0] = 0; c_z[0] = 1.2* r[0] + 0.5* length[0]* sin(theta[0]);
@@ -83,32 +98,25 @@ void  makeLeg()
     dGeomSetBody( rlink[i].geom, rlink[i].body);
   }
 
-  //joint[0] = dJointCreateHinge( world, 0); // hinge
-
-  //for (int j = 1; j < NUM; j++) {
   for (int j = 0; j < NUM; j++) {
     joint[j] = dJointCreateHinge( world, 0); // hinge
-    //dJointAttach( joint[j], rlink[j].body, rlink[j-1].body);
     if ( j > 0)
       dJointAttach( joint[j], rlink[j].body, rlink[j-1].body);
-    //else
-    //dJointAttach( joint[j], rlink[j].body, rlink[j].body);
-
     dJointSetHingeAnchor( joint[j], c_x[j], c_y[j], c_z[j]);
     dJointSetHingeAxis( joint[j], axis_x, axis_y, axis_z);
   }
-
 }
 
-// draw leg
-void drawLeg()
+/*
+void drawLeg() // draw leg
 {
-   dReal r,length;
-   for (int i = 0; i < NUM; i++ ) { // draw capsule
-     dGeomCapsuleGetParams( rlink[i].geom, &r, &length);
-     dsDrawCapsule(dBodyGetPosition( rlink[i].body), dBodyGetRotation(rlink[i].body), length, r);
-   }
+  dReal r,length;
+  for (int i = 0; i < NUM; i++ ) { // draw capsule
+    dGeomCapsuleGetParams( rlink[i].geom, &r, &length);
+    dsDrawCapsule(dBodyGetPosition( rlink[i].body), dBodyGetRotation(rlink[i].body), length, r);
+  }
 }
+*/
 
 // collison detection calculation
 static void nearCallback(void *data, dGeomID o1, dGeomID o2)
@@ -150,17 +158,16 @@ void destroyLeg() // destroy the leg
 
 void AddTorque()
 {
-  dReal Torque_ank = - 5.0;
-  dReal Torque_kne = + 5.0;
-  dReal Torque_hip = - 5.0;
+  dJointAddHingeTorque( joint[0], 0);
 
-  dJointAddHingeTorque( joint[1], Torque_ank);
-  dJointAddHingeTorque( joint[2], Torque_kne);
-  dJointAddHingeTorque( joint[3], Torque_hip);
-
+  for (int i = 1; i < NUM; i++)
+    dJointAddHingeTorque( joint[i], jointTorque[i]);
+  //dJointAddHingeTorque( joint[1], Torque_ank);
+  //dJointAddHingeTorque( joint[2], Torque_kne);
+  //dJointAddHingeTorque( joint[3], Torque_hip);
 }
 
-void GetState(){
+void getState(){
   double q[NUM];
   for (int i = 0; i < NUM; i++)
     q[i] =  dJointGetHingeAngle( joint[i]);
@@ -179,7 +186,6 @@ void GetState(){
 //static void restart() // simulation restart
 //{
 //STEPS    = 0;                        // initialize step number
-
 //destroyLeg();                        // destroy the leg
 //dJointGroupDestroy(contactgroup);    // destroy joint group
 //contactgroup = dJointGroupCreate(0); // create joint group
@@ -190,6 +196,7 @@ static void simLoop(int pause) // simulation loop
 {
   if (!pause) {
     STEPS++;
+    getState();
     AddTorque();
     dSpaceCollide(space,0,&nearCallback);
     //dWorldStep(world,0.01);
@@ -203,7 +210,6 @@ static void simLoop(int pause) // simulation loop
     //STEPS = 0;
     //restart();
     //}
-    
   }
   //drawLeg(); // draw the leg
 }
@@ -217,17 +223,94 @@ static void start()
   dsSetSphereQuality(3);     // sphere quality setting
 }
 
-void setDrawStuff()
-// setup of draw functions
+void setDrawStuff()        // setup of draw functions
 {
-  fn.version = DS_VERSION;    // version of draw stuff
-  fn.start   = &start;        // preprocess: pointer of start function 
-  fn.step    = &simLoop;      // pointer of function simLoop
+  fn.version = DS_VERSION; // version of draw stuff
+  fn.start   = &start;     // preprocess: pointer of start function 
+  fn.step    = &simLoop;   // pointer of function simLoop
   fn.path_to_textures = "../../drawstuff/textures"; // texture path
+}
+
+void getFileName(){
+  //struct tm *date;
+  //time_t now;
+  //time(&now);
+  //date = localtime(&now);
+  
+  //int year   = date->tm_year + 1900;
+  //int month  = date->tm_mon + 1;
+  //int day    = date->tm_mday;
+  //int hour   = date->tm_hour;
+  //int minute = date->tm_min;
+  //int second = date->tm_sec;
+  //int usec   = now.tv_usec;
+
+  //sprintf( filename_o, "../data/%04d%02d%02d/%04d/jump_o_%02d_%02d_%02d_jump.dat", 
+  //year, month, day, DirName, hour, minute, second);
+  //sprintf( filename_m, "../data/%04d%02d%02d/%04d/jump_m_%02d_%02d_%02d_jump.dat", 
+  //year, month, day, DirName, hour, minute, second);
+
+  struct timeval now;
+  gettimeofday(&now, NULL);
+  struct tm *pnow = localtime(&now.tv_sec);
+
+  int year   = pnow->tm_year + 1900;
+  int month  = pnow->tm_mon + 1;
+  int day    = pnow->tm_mday;
+
+  int hour   = pnow->tm_hour;
+  int minute = pnow->tm_min;
+  int second = pnow->tm_sec;
+  int usec   = now.tv_usec;
+  
+  sprintf( filename_o, "../data/%04d%02d%02d/%04d/jump_o_%02d_%02d_%02d_%06d_jump.dat", 
+	   year, month, day, DirName, hour, minute, second, usec);
+  sprintf( filename_m, "../data/%04d%02d%02d/%04d/jump_m_%02d_%02d_%02d_%06d_jump.dat", 
+	   year, month, day, DirName, hour, minute, second, usec);
+  
+  cout << filename_o << endl;
+
+}
+
+void saveData(){
+  //std::ofstream fout( filename, std::ios::out);	
+  ofstream fout_m( filename_m, ios::out);	
+  ofstream fout_o( filename_o, ios::out);	
+  
+  for(int t=0; t < Num_t; t++){
+    fout_m << t << "\t";
+    for(int i=0; i < XYZ; i++)
+      fout_m << Position_data[t][i] << "\t";
+    for(int i=0; i < NUM; i++)
+      fout_m << Angle_data[t][i] << "\t";
+    //fout << std::endl;
+    fout_m << endl;
+  }
+
+  for(int i=1; i < NUM; i++)
+    fout_o << jointTorque[i] << "\t";
+  fout_o << endl;
+
+  fout_m.close();
+  fout_o.close();
 }
 
 int main (int argc, char *argv[])
 {
+  // variables for filaneme
+  if ( argc != 5){
+    printf("error: input 4 values!: three joint torque and directory name\n");
+    return 0;
+  }
+  for(int i=1; i < NUM; i++)
+    jointTorque[i] = atof(argv[i]);
+  DirName = atoi(argv[NUM]);
+
+  //jointTorque[1] = - 5.0;
+  //jointTorque[2] = + 5.0;
+  //jointTorque[3] = - 5.0;
+
+  // initiation
   dInitODE();
   setDrawStuff();
 
@@ -241,15 +324,18 @@ int main (int argc, char *argv[])
   ground = dCreatePlane(space, 0, 0, 1, 0); // set ground
   makeLeg();                                // set the leg
 
+  // loop
   //dsSimulationLoop (argc, argv, 640, 480, &fn);
-
   //while(1) 
-  for (int i = 0; i < Num_t; i++) {
+  for (int i = 0; i < Num_t; i++) 
     simLoop(0);
-  }
 
+  // termination
   dWorldDestroy (world);
   dCloseODE();
+
+  getFileName();
+  saveData();
 
   return 0;
 }
