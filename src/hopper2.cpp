@@ -34,6 +34,11 @@ static int STEPS = 0; // simulation step number
 MyObject rlink[NUM];  // number
 dJointID joint[NUM];  // joint ID number
 
+#define XYZ 3
+#define Num_t 1000
+double Angle_data[Num_t][NUM];
+double Position_data[Num_t][XYZ];
+
 // make the leg
 void  makeLeg()
 {
@@ -123,9 +128,9 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2)
     for (int i = 0; i < n; i++) {
       contact[i].surface.mode   = dContactBounce | dContactSoftERP |
                                   dContactSoftCFM;
-      contact[i].surface.soft_erp   = 0.2;   // 接触点のERP
-      contact[i].surface.soft_cfm   = 0.001; // 接触点のCFM
-      contact[i].surface.mu     = dInfinity; // 摩擦係数:無限大
+      contact[i].surface.soft_erp   = 0.2;   // ERP of contact point
+      contact[i].surface.soft_cfm   = 0.001; // CFM of contact point
+      contact[i].surface.mu     = dInfinity; // friction coefficient: infinity
       dJointID c = dJointCreateContact(world,
                                        contactgroup,&contact[i]);
       dJointAttach (c,dGeomGetBody(contact[i].geom.g1),
@@ -153,24 +158,33 @@ void AddTorque()
   dJointAddHingeTorque( joint[2], Torque_kne);
   dJointAddHingeTorque( joint[3], Torque_hip);
 
+}
+
+void GetState(){
   double q[NUM];
-  for (int i = 0; i < NUM; i++) {
+  for (int i = 0; i < NUM; i++)
     q[i] =  dJointGetHingeAngle( joint[i]);
-  }
+  
   const dReal *p = dBodyGetPosition( rlink[0].body);
 
-  printf( "%lf\t %lf\t %lf\t %lf\t %lf\t %lf\t %lf\n", q[0], q[1], q[2], q[3], p[0], p[1], p[2]);
+  for (int i = 0; i < NUM; i++)
+    Angle_data[STEPS][i] = q[i];
+
+  for (int i = 0; i < XYZ; i++)
+    Position_data[STEPS][i] = p[i];
+
+  //printf( "%lf\t %lf\t %lf\t %lf\t %lf\t %lf\t %lf\n", q[0], q[1], q[2], q[3], p[0], p[1], p[2]);
 }
 
-static void restart() // simulation restart
-{
-  STEPS    = 0;                        // initialize step number
+//static void restart() // simulation restart
+//{
+//STEPS    = 0;                        // initialize step number
 
-  destroyLeg();                        // destroy the leg
-  dJointGroupDestroy(contactgroup);    // destroy joint group
-  contactgroup = dJointGroupCreate(0); // create joint group
-  makeLeg();                           // make the leg
-}
+//destroyLeg();                        // destroy the leg
+//dJointGroupDestroy(contactgroup);    // destroy joint group
+//contactgroup = dJointGroupCreate(0); // create joint group
+//makeLeg();                           // make the leg
+//}
 
 static void simLoop(int pause) // simulation loop
 {
@@ -184,14 +198,14 @@ static void simLoop(int pause) // simulation loop
 
     //printf("%d\n",STEPS);
 
-    if (STEPS > 1000){
+    //if (STEPS > 1000){
     //if (STEPS > 10000){
-      STEPS = 0;
-      restart();
-    }
+    //STEPS = 0;
+    //restart();
+    //}
     
   }
-  drawLeg(); // draw the leg
+  //drawLeg(); // draw the leg
 }
 
 static void start()
@@ -206,9 +220,9 @@ static void start()
 void setDrawStuff()
 // setup of draw functions
 {
-  fn.version = DS_VERSION;    // ドロースタッフのバージョン
-  fn.start   = &start;        // 前処理 start関数のポインタ
-  fn.step    = &simLoop;      // simLoop関数のポインタ
+  fn.version = DS_VERSION;    // version of draw stuff
+  fn.start   = &start;        // preprocess: pointer of start function 
+  fn.step    = &simLoop;      // pointer of function simLoop
   fn.path_to_textures = "../../drawstuff/textures"; // texture path
 }
 
@@ -227,7 +241,12 @@ int main (int argc, char *argv[])
   ground = dCreatePlane(space, 0, 0, 1, 0); // set ground
   makeLeg();                                // set the leg
 
-  dsSimulationLoop (argc, argv, 640, 480, &fn);
+  //dsSimulationLoop (argc, argv, 640, 480, &fn);
+
+  //while(1) 
+  for (int i = 0; i < Num_t; i++) {
+    simLoop(0);
+  }
 
   dWorldDestroy (world);
   dCloseODE();
