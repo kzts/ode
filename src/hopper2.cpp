@@ -53,10 +53,6 @@ char filename_m[999];
 dReal jointTorque[NUM];
 unsigned int DirName;
 
-//dReal Torque_ank = - 5.0;
-//dReal Torque_kne = + 5.0;
-//dReal Torque_hip = - 5.0;
-
 // make the leg
 void  makeLeg()
 {
@@ -162,9 +158,6 @@ void AddTorque()
 
   for (int i = 1; i < NUM; i++)
     dJointAddHingeTorque( joint[i], jointTorque[i]);
-  //dJointAddHingeTorque( joint[1], Torque_ank);
-  //dJointAddHingeTorque( joint[2], Torque_kne);
-  //dJointAddHingeTorque( joint[3], Torque_hip);
 }
 
 void getState(){
@@ -195,13 +188,14 @@ void getState(){
 static void simLoop(int pause) // simulation loop
 {
   if (!pause) {
-    STEPS++;
+    //STEPS++;
     getState();
     AddTorque();
     dSpaceCollide(space,0,&nearCallback);
     //dWorldStep(world,0.01);
     dWorldStep(world,0.001);
     dJointGroupEmpty(contactgroup);
+    STEPS++;
 
     //printf("%d\n",STEPS);
 
@@ -232,24 +226,6 @@ void setDrawStuff()        // setup of draw functions
 }
 
 void getFileName(){
-  //struct tm *date;
-  //time_t now;
-  //time(&now);
-  //date = localtime(&now);
-  
-  //int year   = date->tm_year + 1900;
-  //int month  = date->tm_mon + 1;
-  //int day    = date->tm_mday;
-  //int hour   = date->tm_hour;
-  //int minute = date->tm_min;
-  //int second = date->tm_sec;
-  //int usec   = now.tv_usec;
-
-  //sprintf( filename_o, "../data/%04d%02d%02d/%04d/jump_o_%02d_%02d_%02d_jump.dat", 
-  //year, month, day, DirName, hour, minute, second);
-  //sprintf( filename_m, "../data/%04d%02d%02d/%04d/jump_m_%02d_%02d_%02d_jump.dat", 
-  //year, month, day, DirName, hour, minute, second);
-
   struct timeval now;
   gettimeofday(&now, NULL);
   struct tm *pnow = localtime(&now.tv_sec);
@@ -267,9 +243,7 @@ void getFileName(){
 	   year, month, day, DirName, hour, minute, second, usec);
   sprintf( filename_m, "../data/%04d%02d%02d/%04d/jump_m_%02d_%02d_%02d_%06d_jump.dat", 
 	   year, month, day, DirName, hour, minute, second, usec);
-  
-  cout << filename_o << endl;
-
+  //cout << filename_o << endl;
 }
 
 void saveData(){
@@ -283,10 +257,8 @@ void saveData(){
       fout_m << Position_data[t][i] << "\t";
     for(int i=0; i < NUM; i++)
       fout_m << Angle_data[t][i] << "\t";
-    //fout << std::endl;
     fout_m << endl;
   }
-
   for(int i=1; i < NUM; i++)
     fout_o << jointTorque[i] << "\t";
   fout_o << endl;
@@ -298,17 +270,13 @@ void saveData(){
 int main (int argc, char *argv[])
 {
   // variables for filaneme
-  if ( argc != 5){
+  if ( argc != (NUM + 1)){
     printf("error: input 4 values!: three joint torque and directory name\n");
     return 0;
   }
   for(int i=1; i < NUM; i++)
     jointTorque[i] = atof(argv[i]);
   DirName = atoi(argv[NUM]);
-
-  //jointTorque[1] = - 5.0;
-  //jointTorque[2] = + 5.0;
-  //jointTorque[3] = - 5.0;
 
   // initiation
   dInitODE();
