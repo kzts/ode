@@ -35,55 +35,59 @@ typedef struct { // MyObject structure
 
 static int STEPS = 0; // simulation step number
 
-#define  NUM 4        // link number
-MyObject rlink[NUM];  // number
-dJointID joint[NUM];  // joint ID number
+#define  NUM_l 4       // link number
+#define  NUM_j 3       // joint number
+MyObject rlink[NUM_l]; // number
+dJointID joint[NUM_j]; // joint ID number
 
 dReal Pi = 3.14159;
 
 #define XYZ 3
 #define Num_t 1000
-double Angle_data[Num_t][NUM];
-double Position_data[Num_t][NUM][XYZ];
+//double Angle_data[Num_t][NUM];
+//double Position_data[Num_t][NUM][XYZ];
+double Pos_link_data [Num_t][NUM_l][XYZ];
+double Pos_joint_data[Num_t][NUM_j][XYZ];
+double Angle_data[Num_t][NUM_j];
 
 char filename_o[999];
 char filename_m[999];
 
-dReal jointTorque[NUM];
+//dReal jointTorque[NUM];
+dReal jointTorque[NUM_j];
 unsigned int DirName;
 
-double theta[NUM] = { Pi, Pi/6.0, 5.0*Pi/6.0, Pi/6.0}; 
-double phi[NUM];
-
+double theta[NUM_l] = { Pi, Pi/6.0, 5.0*Pi/6.0, Pi/6.0}; 
+//double phi[NUM_l];
 
 void  makeLeg() // make the leg
 {
   dMass mass; // mass parameter
   dMatrix3 R;
-  dReal length[NUM] = {0.20, 0.30, 0.30, 0.50}; 
-  dReal weight[NUM] = {0.40, 0.80, 0.80, 3.60};
-  dReal r[NUM]      = {0.02, 0.02, 0.02, 0.02}; // radius
+  dReal length[NUM_l] = {0.20, 0.30, 0.30, 0.50}; 
+  dReal weight[NUM_l] = {0.40, 0.80, 0.80, 3.60};
+  dReal r[NUM_l]      = {0.02, 0.02, 0.02, 0.02}; // radius
   dReal axis_x = 0; // joint axis x 
   dReal axis_y = 1; // joint axis y 
   dReal axis_z = 0; // joint axis z 
 
-  dReal x[NUM], y[NUM], z[NUM];  
-  dReal c_x[NUM], c_y[NUM], c_z[NUM];   
+  dReal x[NUM_l], y[NUM_l], z[NUM_l];  
+  dReal c_x[NUM_l], c_y[NUM_l], c_z[NUM_l];   
 
   c_x[0] = 0; c_y[0] = 0; c_z[0] = 1.2* r[0] + 0.5* length[0]* sin(theta[0]);
 
-  for (int i = 1; i < NUM; i++) {
+  for (int i = 1; i < NUM_l; i++) {
     c_x[i] = c_x[i-1] + 1.0* length[i-1]* cos(theta[i-1]); 
     c_y[i] = c_y[i-1];
     c_z[i] = c_z[i-1] + 1.0* length[i-1]* sin(theta[i-1]); 
   }
-  for (int i = 0; i < NUM; i++) {
+  for (int i = 0; i < NUM_l; i++) {
     x[i]   = c_x[i] + 0.5* length[i]* cos(theta[i]); 
     y[i]   = c_y[i];
     z[i]   = c_z[i] + 0.5* length[i]* sin(theta[i]); 
   }
 
-  for (int i = 0; i < NUM; i++) {
+  for (int i = 0; i < NUM_l; i++) {
     rlink[i].body  = dBodyCreate( world);
     dBodySetPosition( rlink[i].body,  x[i], y[i], z[i]);
     dRFromAxisAndAngle( R, axis_x, axis_y, axis_z, - theta[i] - Pi/2.0);
@@ -95,19 +99,18 @@ void  makeLeg() // make the leg
     dGeomSetBody( rlink[i].geom, rlink[i].body);
   }
 
-  for (int j = 0; j < NUM; j++) {
+  for (int j = 0; j < NUM_j; j++) {
     joint[j] = dJointCreateHinge( world, 0); // hinge
-    if ( j > 0)
-      dJointAttach( joint[j], rlink[j].body, rlink[j-1].body);
+    dJointAttach( joint[j], rlink[j + 1].body, rlink[j].body);
     dJointSetHingeAnchor( joint[j], c_x[j], c_y[j], c_z[j]);
     dJointSetHingeAxis( joint[j], axis_x, axis_y, axis_z);
   }
 
   // define initial angle
-  phi[0] = 0;
-  phi[1] = theta[1] - theta[0] + 2.0*Pi;
-  phi[2] = theta[2] - theta[1];
-  phi[3] = theta[3] - theta[2] + 2.0*Pi;
+  //phi[0] = 0;
+  //phi[1] = theta[1] - theta[0] + 2.0*Pi;
+  //phi[2] = theta[2] - theta[1];
+  //phi[3] = theta[3] - theta[2] + 2.0*Pi;
 
 }
 
@@ -153,37 +156,53 @@ static void nearCallback(void *data, dGeomID o1, dGeomID o2) // collison detecti
 
 void destroyLeg() // destroy the leg
 {
-  for (int i = 0; i < NUM; i++) {
-    dJointDestroy(joint[i]);     // destroy joint 
+  for (int i = 0; i < NUM_l; i++) {
+    //dJointDestroy(joint[i]);     // destroy joint 
     dBodyDestroy(rlink[i].body); // destroy body
     dGeomDestroy(rlink[i].geom); // destroy geometory
   }
+  for (int i = 0; i < NUM_j; i++)
+    dJointDestroy(joint[i]);     // destroy joint 
 }
 
 void AddTorque()
 {
   dJointAddHingeTorque( joint[0], 0);
 
-  for (int i = 1; i < NUM; i++)
+  for (int i = 0; i < NUM_j; i++)
     dJointAddHingeTorque( joint[i], jointTorque[i]);
+  
+  //for (int i = 1; i < NUM; i++)
+  //dJointAddHingeTorque( joint[i], jointTorque[i]);
 }
 
 void getState(){
-  double q[NUM];
+  //double q[NUM];
   dVector3 res;
-  for (int i = 0; i < NUM; i++)
-    q[i] =  dJointGetHingeAngle( joint[i]);
-  for (int i = 0; i < NUM; i++)
-    Angle_data[STEPS][i] = q[i] + phi[i];
 
-  for (int i = 0; i < NUM; i++){
-    //const dReal *p = dBodyGetPosition( rlink[i].body);
-    //for (int d = 0; d < XYZ; d++)
-    //Position_data[STEPS][i][d] = p[d];
+  for (int i = 0; i < NUM_l; i++){
+    const dReal *p = dBodyGetPosition( rlink[i].body);
+    for (int d = 0; d < XYZ; d++)
+      Pos_link_data[STEPS][i][d] = p[d];
+  }
+  for (int i = 0; i < NUM_j; i++){
     dJointGetHingeAnchor( joint[i], res);
     for (int d = 0; d < XYZ; d++)
-      Position_data[STEPS][i][d] = res[d];
+      Pos_joint_data[STEPS][i][d] = res[d];
   }
+
+  //for (int i = 0; i < NUM; i++)
+  //q[i] =  dJointGetHingeAngle( joint[i]);
+  //for (int i = 0; i < NUM; i++)
+  //Angle_data[STEPS][i] = q[i] + phi[i];
+  //for (int i = 0; i < NUM; i++){
+  //const dReal *p = dBodyGetPosition( rlink[i].body);
+  //for (int d = 0; d < XYZ; d++)
+  //Position_data[STEPS][i][d] = p[d];
+  //dJointGetHingeAnchor( joint[i], res);
+  //for (int d = 0; d < XYZ; d++)
+  //Position_data[STEPS][i][d] = res[d];
+  //}
 }
 
 //static void restart() // simulation restart
@@ -262,16 +281,30 @@ void saveData(){
   
   for(int t=0; t < Num_t; t++){
     fout_m << t << "\t";
-    for(int i=0; i < NUM; i++)
+    for(int i=0; i < NUM_l; i++)
       for(int d=0; d < XYZ; d++)
-	fout_m << Position_data[t][i][d] << "\t";
-    for(int i=0; i < NUM; i++)          
-      fout_m << Angle_data[t][i] << "\t";
+	fout_m << Pos_link_data[t][i][d] << "\t";
+    for(int i=0; i < NUM_j; i++)  
+      for(int d=0; d < XYZ; d++)        
+	fout_m << Pos_joint_data[t][i][d] << "\t";
     fout_m << endl;
   }
-  for(int i=1; i < NUM; i++)
+  for(int i=0; i < NUM_j; i++)
     fout_o << jointTorque[i] << "\t";
   fout_o << endl;
+
+  //for(int t=0; t < Num_t; t++){
+  //fout_m << t << "\t";
+  //for(int i=0; i < NUM; i++)
+  //for(int d=0; d < XYZ; d++)
+  //fout_m << Position_data[t][i][d] << "\t";
+  //for(int i=0; i < NUM; i++)          
+  //fout_m << Angle_data[t][i] << "\t";
+  //fout_m << endl;
+  //}
+  //for(int i=1; i < NUM; i++)
+  //fout_o << jointTorque[i] << "\t";
+  //fout_o << endl;
 
   fout_m.close();
   fout_o.close();
@@ -280,13 +313,21 @@ void saveData(){
 int main (int argc, char *argv[])
 {
   // variables for filaneme
-  if ( argc != (NUM + 1)){
+  if ( argc != (NUM_l + 1)){
     printf("error: input 4 values!: three joint torque and directory name\n");
     return 0;
   }
-  for(int i=1; i < NUM; i++)
-    jointTorque[i] = atof(argv[i]);
-  DirName = atoi(argv[NUM]);
+  for(int i=0; i < NUM_j; i++)
+    jointTorque[i] = atof(argv[i + 1]);
+  DirName = atoi(argv[NUM_j + 1]);
+
+  //if ( argc != (NUM + 1)){
+  //printf("error: input 4 values!: three joint torque and directory name\n");
+  //return 0;
+  //}
+  //for(int i=1; i < NUM; i++)
+  //jointTorque[i] = atof(argv[i]);
+  //DirName = atoi(argv[NUM]);
 
   // initiation
   dInitODE();
