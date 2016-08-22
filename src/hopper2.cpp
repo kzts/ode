@@ -20,12 +20,12 @@ using namespace std;
 #define dsDrawCapsule  dsDrawCapsuleD
 #endif
 
-dWorldID world;  // dynamic simulation world
-dSpaceID space;  // contact dection space
-dGeomID  ground; // ground
+dWorldID world;             // dynamic simulation world
+dSpaceID space;             // contact dection space
+dGeomID  ground;            // ground
 dJointGroupID contactgroup; // contact group
 dReal r = 0.2, m  = 1.0;
-dsFunctions fn;  // draw function of drawn stuff
+dsFunctions fn;             // draw function of drawn stuff
 
 typedef struct { // MyObject structure
   dBodyID body;  // ID number of (rigid) body (for dynamical simulations)
@@ -44,22 +44,19 @@ dReal Pi = 3.14159;
 #define XYZ 3
 #define Num_t 1000
 double Angle_data[Num_t][NUM];
-//double Position_data[Num_t][XYZ];
 double Position_data[Num_t][NUM][XYZ];
 
 char filename_o[999];
 char filename_m[999];
 
-//double jointTorque[NUM];
 dReal jointTorque[NUM];
 unsigned int DirName;
 
-//dReal theta[NUM] = { Pi, Pi/6.0, 5.0*Pi/6.0, Pi/6.0}; 
 double theta[NUM] = { Pi, Pi/6.0, 5.0*Pi/6.0, Pi/6.0}; 
 double phi[NUM];
 
-// make the leg
-void  makeLeg()
+
+void  makeLeg() // make the leg
 {
   dMass mass; // mass parameter
   dMatrix3 R;
@@ -72,7 +69,6 @@ void  makeLeg()
 
   dReal x[NUM], y[NUM], z[NUM];  
   dReal c_x[NUM], c_y[NUM], c_z[NUM];   
-  //dReal theta[NUM] = { Pi, Pi/6.0, 5.0*Pi/6.0, Pi/6.0}; 
 
   c_x[0] = 0; c_y[0] = 0; c_z[0] = 1.2* r[0] + 0.5* length[0]* sin(theta[0]);
 
@@ -126,15 +122,15 @@ void drawLeg() // draw leg
 }
 */
 
-// collison detection calculation
-static void nearCallback(void *data, dGeomID o1, dGeomID o2)
+
+static void nearCallback(void *data, dGeomID o1, dGeomID o2) // collison detection calculation
 {
   static const int N = 7; // collision point number
   dContact contact[N];
 
   int isGround = ((ground == o1) || (ground == o2));
 
-  // 2つのボディがジョイントで結合されていたら衝突検出しない
+  // no collision detection in case of two body connected by a joint 
   dBodyID b1 = dGeomGetBody(o1);
   dBodyID b2 = dGeomGetBody(o2);
   if (b1 && b2 && dAreConnectedExcluding(b1,b2,dJointTypeContact)) return;
@@ -176,23 +172,14 @@ void getState(){
   double q[NUM];
   for (int i = 0; i < NUM; i++)
     q[i] =  dJointGetHingeAngle( joint[i]);
-  
-  //const dReal *p = dBodyGetPosition( rlink[0].body);
-
   for (int i = 0; i < NUM; i++)
     Angle_data[STEPS][i] = q[i] + phi[i];
-    //Angle_data[STEPS][i] = q[i] - theta[i];
-    //Angle_data[STEPS][i] = q[i];
-
-  //for (int i = 0; i < XYZ; i++)
-  //Position_data[STEPS][i] = p[i];
 
   for (int i = 0; i < NUM; i++){
     const dReal *p = dBodyGetPosition( rlink[i].body);
     for (int d = 0; d < XYZ; d++)
       Position_data[STEPS][i][d] = p[d];
   }
-  //printf( "%lf\t %lf\t %lf\t %lf\t %lf\t %lf\t %lf\n", q[0], q[1], q[2], q[3], p[0], p[1], p[2]);
 }
 
 //static void restart() // simulation restart
@@ -211,7 +198,6 @@ static void simLoop(int pause) // simulation loop
     getState();
     AddTorque();
     dSpaceCollide(space,0,&nearCallback);
-    //dWorldStep(world,0.01);
     dWorldStep(world,0.001);
     dJointGroupEmpty(contactgroup);
     STEPS++;
@@ -258,10 +244,8 @@ void getFileName(){
   int second = pnow->tm_sec;
   int usec   = now.tv_usec;
   
-  //sprintf( filename_o, "../data/%04d%02d%02d/%04d/jump_o_%02d_%02d_%02d_%06d_jump.dat", 
   sprintf( filename_o, "../data/%04d%02d%02d/%06d/jump_o_%02d_%02d_%02d_%06d_jump.dat", 
 	   year, month, day, DirName, hour, minute, second, usec);
-  //sprintf( filename_m, "../data/%04d%02d%02d/%04d/jump_m_%02d_%02d_%02d_%06d_jump.dat", 
   sprintf( filename_m, "../data/%04d%02d%02d/%06d/jump_m_%02d_%02d_%02d_%06d_jump.dat", 
 	   year, month, day, DirName, hour, minute, second, usec);
   //cout << filename_o << endl;
@@ -281,14 +265,6 @@ void saveData(){
       fout_m << Angle_data[t][i] << "\t";
     fout_m << endl;
   }
-  //for(int t=0; t < Num_t; t++){
-  //fout_m << t << "\t";
-  //for(int i=0; i < XYZ; i++)
-  //fout_m << Position_data[t][i] << "\t";
-  //for(int i=0; i < NUM; i++)
-  //fout_m << Angle_data[t][i] << "\t";
-  //fout_m << endl;
-  //}
   for(int i=1; i < NUM; i++)
     fout_o << jointTorque[i] << "\t";
   fout_o << endl;
