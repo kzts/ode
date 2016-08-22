@@ -170,15 +170,19 @@ void AddTorque()
 
 void getState(){
   double q[NUM];
+  dVector3 res;
   for (int i = 0; i < NUM; i++)
     q[i] =  dJointGetHingeAngle( joint[i]);
   for (int i = 0; i < NUM; i++)
     Angle_data[STEPS][i] = q[i] + phi[i];
 
   for (int i = 0; i < NUM; i++){
-    const dReal *p = dBodyGetPosition( rlink[i].body);
+    //const dReal *p = dBodyGetPosition( rlink[i].body);
+    //for (int d = 0; d < XYZ; d++)
+    //Position_data[STEPS][i][d] = p[d];
+    dJointGetHingeAnchor( joint[i], res);
     for (int d = 0; d < XYZ; d++)
-      Position_data[STEPS][i][d] = p[d];
+      Position_data[STEPS][i][d] = res[d];
   }
 }
 
