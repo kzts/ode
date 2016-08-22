@@ -258,9 +258,11 @@ void getFileName(){
   int second = pnow->tm_sec;
   int usec   = now.tv_usec;
   
-  sprintf( filename_o, "../data/%04d%02d%02d/%04d/jump_o_%02d_%02d_%02d_%06d_jump.dat", 
+  //sprintf( filename_o, "../data/%04d%02d%02d/%04d/jump_o_%02d_%02d_%02d_%06d_jump.dat", 
+  sprintf( filename_o, "../data/%04d%02d%02d/%06d/jump_o_%02d_%02d_%02d_%06d_jump.dat", 
 	   year, month, day, DirName, hour, minute, second, usec);
-  sprintf( filename_m, "../data/%04d%02d%02d/%04d/jump_m_%02d_%02d_%02d_%06d_jump.dat", 
+  //sprintf( filename_m, "../data/%04d%02d%02d/%04d/jump_m_%02d_%02d_%02d_%06d_jump.dat", 
+  sprintf( filename_m, "../data/%04d%02d%02d/%06d/jump_m_%02d_%02d_%02d_%06d_jump.dat", 
 	   year, month, day, DirName, hour, minute, second, usec);
   //cout << filename_o << endl;
 }

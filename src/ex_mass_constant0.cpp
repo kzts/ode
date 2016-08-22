@@ -806,8 +806,8 @@ void command(int cmd){
 
 // Set view point and the initial words on CUI
 void start(){
-  float xyz[3] = {    0.0f, 1.5f, 0.5f};			// position of observer (m)
-  float hpr[3] = { -90.0f, -20.0f, 0.0f};			// angle of view(°)
+  float xyz[3] = {    0.0f, 1.5f, 0.5f}; // position of observer (m)
+  float hpr[3] = { -90.0f, -20.0f, 0.0f}; // angle of view(°)
   dsSetViewpoint(xyz, hpr);
   // Print on CUI
   printf("Use ctrl+x to end process.\n");
@@ -815,25 +815,25 @@ void start(){
 
 // Simulation loop
 void simLoop(int pause){
-  if(!pause){											// use ctrl+p to pause
+  if(!pause){ // use ctrl+p to pause
     //Pcontrol();
-    TorqueControl();								// torque control function
-    dSpaceCollide(space, 0, &nearCallback);			// collision detection
-    dWorldStep(world, STEP_SIZE);					// dynamic computation, change step time to tune the proper simulation speed
-    dJointGroupEmpty(contactgroup);					// empty joint
+    TorqueControl(); // torque control function
+    dSpaceCollide(space, 0, &nearCallback); // collision detection
+    dWorldStep(world, STEP_SIZE); // dynamic computation, change step time to tune the proper simulation speed
+    dJointGroupEmpty(contactgroup); // empty joint
   }
 #ifdef DRAW
-  drawLink();                                                           // draw link
+  drawLink(); // draw link
 #else
 #endif	
 }
 
 // DrawStuff
 void setDrawStuff(){
-  fn.version = DS_VERSION;							// version number
-  fn.start   = &start;								// start function
-  fn.step    = &simLoop;								// simLoop function
-  fn.command = &command;								// command function
+  fn.version = DS_VERSION; // version number
+  fn.start   = &start; // start function
+  fn.step    = &simLoop; // simLoop function
+  fn.command = &command; // command function
   fn.stop    = NULL;
   fn.path_to_textures = TEXTURES_PATH;
 }
