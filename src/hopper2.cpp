@@ -53,7 +53,9 @@ char filename_m[999];
 dReal jointTorque[NUM];
 unsigned int DirName;
 
-dReal theta[NUM] = { Pi, Pi/6.0, 5.0*Pi/6.0, Pi/6.0}; 
+//dReal theta[NUM] = { Pi, Pi/6.0, 5.0*Pi/6.0, Pi/6.0}; 
+double theta[NUM] = { Pi, Pi/6.0, 5.0*Pi/6.0, Pi/6.0}; 
+double phi[NUM];
 
 // make the leg
 void  makeLeg()
@@ -103,6 +105,13 @@ void  makeLeg()
     dJointSetHingeAnchor( joint[j], c_x[j], c_y[j], c_z[j]);
     dJointSetHingeAxis( joint[j], axis_x, axis_y, axis_z);
   }
+
+  // define initial angle
+  phi[0] = 0;
+  phi[1] = theta[1] - theta[0] + 2.0*Pi;
+  phi[2] = theta[2] - theta[1];
+  phi[3] = theta[3] - theta[2] + 2.0*Pi;
+
 }
 
 /*
@@ -170,7 +179,8 @@ void getState(){
   const dReal *p = dBodyGetPosition( rlink[0].body);
 
   for (int i = 0; i < NUM; i++)
-    Angle_data[STEPS][i] = q[i] - theta[i];
+    Angle_data[STEPS][i] = q[i] + phi[i];
+    //Angle_data[STEPS][i] = q[i] - theta[i];
     //Angle_data[STEPS][i] = q[i];
 
   for (int i = 0; i < XYZ; i++)
