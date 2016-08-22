@@ -44,7 +44,8 @@ dReal Pi = 3.14159;
 #define XYZ 3
 #define Num_t 1000
 double Angle_data[Num_t][NUM];
-double Position_data[Num_t][XYZ];
+//double Position_data[Num_t][XYZ];
+double Position_data[Num_t][NUM][XYZ];
 
 char filename_o[999];
 char filename_m[999];
@@ -176,16 +177,21 @@ void getState(){
   for (int i = 0; i < NUM; i++)
     q[i] =  dJointGetHingeAngle( joint[i]);
   
-  const dReal *p = dBodyGetPosition( rlink[0].body);
+  //const dReal *p = dBodyGetPosition( rlink[0].body);
 
   for (int i = 0; i < NUM; i++)
     Angle_data[STEPS][i] = q[i] + phi[i];
     //Angle_data[STEPS][i] = q[i] - theta[i];
     //Angle_data[STEPS][i] = q[i];
 
-  for (int i = 0; i < XYZ; i++)
-    Position_data[STEPS][i] = p[i];
+  //for (int i = 0; i < XYZ; i++)
+  //Position_data[STEPS][i] = p[i];
 
+  for (int i = 0; i < NUM; i++){
+    const dReal *p = dBodyGetPosition( rlink[i].body);
+    for (int d = 0; d < XYZ; d++)
+      Position_data[STEPS][i][d] = p[d];
+  }
   //printf( "%lf\t %lf\t %lf\t %lf\t %lf\t %lf\t %lf\n", q[0], q[1], q[2], q[3], p[0], p[1], p[2]);
 }
 
@@ -266,12 +272,21 @@ void saveData(){
   
   for(int t=0; t < Num_t; t++){
     fout_m << t << "\t";
-    for(int i=0; i < XYZ; i++)
-      fout_m << Position_data[t][i] << "\t";
     for(int i=0; i < NUM; i++)
+      for(int d=0; d < XYZ; d++)
+	fout_m << Position_data[t][i][d] << "\t";
+    for(int i=0; i < NUM; i++)          
       fout_m << Angle_data[t][i] << "\t";
     fout_m << endl;
   }
+  //for(int t=0; t < Num_t; t++){
+  //fout_m << t << "\t";
+  //for(int i=0; i < XYZ; i++)
+  //fout_m << Position_data[t][i] << "\t";
+  //for(int i=0; i < NUM; i++)
+  //fout_m << Angle_data[t][i] << "\t";
+  //fout_m << endl;
+  //}
   for(int i=1; i < NUM; i++)
     fout_o << jointTorque[i] << "\t";
   fout_o << endl;
