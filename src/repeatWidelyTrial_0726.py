@@ -5,8 +5,9 @@ import random
 
 d = datetime.datetime.today()
 
-DirName1 = str("{0:04d}".format(d.year)) + str("{0:02d}".format(d.month)) + str("{0:02d}".format(d.day))
-DirName2 = str("{0:02d}".format(d.hour)) + str("{0:02d}".format(d.minute))
+DirName1 = str("{0:04d}".format(d.year)) + str("{0:02d}".format(d.month))  + str("{0:02d}".format(d.day))
+#DirName2 = str("{0:02d}".format(d.hour)) + str("{0:02d}".format(d.minute))
+DirName2 = str("{0:02d}".format(d.hour)) + str("{0:02d}".format(d.minute)) + str("{0:02d}".format(d.second))
 
 cmd_Mkdir = "mkdir ../data/" + DirName1 + '/' + DirName2
 
