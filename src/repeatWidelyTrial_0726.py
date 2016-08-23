@@ -22,12 +22,19 @@ os.system(cmd_Mkdir)
 #Prs_Elb_min = - 5.0
 #Prs_Wst_min = - 5.0
 
-Prs_Sld_max = + 10.0
-Prs_Elb_max = + 10.0
-Prs_Wst_max = + 10.0
-Prs_Sld_min = - 10.0
-Prs_Elb_min = - 10.0
-Prs_Wst_min = - 10.0
+#Prs_Sld_max = + 10.0
+#Prs_Elb_max = + 10.0
+#Prs_Wst_max = + 10.0
+#Prs_Sld_min = - 10.0
+#Prs_Elb_min = - 10.0
+#Prs_Wst_min = - 10.0
+
+Prs_Sld_max = - 2.0
+Prs_Elb_max = + 8.0
+Prs_Wst_max = - 2.0
+Prs_Sld_min = - 8.0
+Prs_Elb_min = + 2.0
+Prs_Wst_min = - 8.0
 
 N = 1000
 #N = 500

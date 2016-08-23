@@ -102,7 +102,8 @@ void  makeLeg() // make the leg
   for (int j = 0; j < NUM_j; j++) {
     joint[j] = dJointCreateHinge( world, 0); // hinge
     dJointAttach( joint[j], rlink[j + 1].body, rlink[j].body);
-    dJointSetHingeAnchor( joint[j], c_x[j], c_y[j], c_z[j]);
+    //dJointSetHingeAnchor( joint[j], c_x[j], c_y[j], c_z[j]);
+    dJointSetHingeAnchor( joint[j], c_x[j+1], c_y[j+1], c_z[j+1]);
     dJointSetHingeAxis( joint[j], axis_x, axis_y, axis_z);
   }
 
