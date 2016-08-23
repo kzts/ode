@@ -115,16 +115,16 @@ void  makeLeg() // make the leg
 
 }
 
-/*
+
 void drawLeg() // draw leg
 {
   dReal r,length;
-  for (int i = 0; i < NUM; i++ ) { // draw capsule
+  for (int i = 0; i < NUM_l; i++ ) { // draw capsule
     dGeomCapsuleGetParams( rlink[i].geom, &r, &length);
     dsDrawCapsule(dBodyGetPosition( rlink[i].body), dBodyGetRotation(rlink[i].body), length, r);
   }
 }
-*/
+
 
 
 static void nearCallback(void *data, dGeomID o1, dGeomID o2) // collison detection calculation
@@ -169,12 +169,8 @@ void destroyLeg() // destroy the leg
 void AddTorque()
 {
   dJointAddHingeTorque( joint[0], 0);
-
   for (int i = 0; i < NUM_j; i++)
     dJointAddHingeTorque( joint[i], jointTorque[i]);
-  
-  //for (int i = 1; i < NUM; i++)
-  //dJointAddHingeTorque( joint[i], jointTorque[i]);
 }
 
 void getState(){
@@ -191,19 +187,6 @@ void getState(){
     for (int d = 0; d < XYZ; d++)
       Pos_joint_data[STEPS][i][d] = res[d];
   }
-
-  //for (int i = 0; i < NUM; i++)
-  //q[i] =  dJointGetHingeAngle( joint[i]);
-  //for (int i = 0; i < NUM; i++)
-  //Angle_data[STEPS][i] = q[i] + phi[i];
-  //for (int i = 0; i < NUM; i++){
-  //const dReal *p = dBodyGetPosition( rlink[i].body);
-  //for (int d = 0; d < XYZ; d++)
-  //Position_data[STEPS][i][d] = p[d];
-  //dJointGetHingeAnchor( joint[i], res);
-  //for (int d = 0; d < XYZ; d++)
-  //Position_data[STEPS][i][d] = res[d];
-  //}
 }
 
 //static void restart() // simulation restart
@@ -225,16 +208,8 @@ static void simLoop(int pause) // simulation loop
     dWorldStep(world,0.001);
     dJointGroupEmpty(contactgroup);
     STEPS++;
-
-    //printf("%d\n",STEPS);
-
-    //if (STEPS > 1000){
-    //if (STEPS > 10000){
-    //STEPS = 0;
-    //restart();
-    //}
+    //drawLeg(); // draw the leg
   }
-  //drawLeg(); // draw the leg
 }
 
 static void start()
@@ -276,7 +251,6 @@ void getFileName(){
 }
 
 void saveData(){
-  //std::ofstream fout( filename, std::ios::out);	
   ofstream fout_m( filename_m, ios::out);	
   ofstream fout_o( filename_o, ios::out);	
   
@@ -294,19 +268,6 @@ void saveData(){
     fout_o << jointTorque[i] << "\t";
   fout_o << endl;
 
-  //for(int t=0; t < Num_t; t++){
-  //fout_m << t << "\t";
-  //for(int i=0; i < NUM; i++)
-  //for(int d=0; d < XYZ; d++)
-  //fout_m << Position_data[t][i][d] << "\t";
-  //for(int i=0; i < NUM; i++)          
-  //fout_m << Angle_data[t][i] << "\t";
-  //fout_m << endl;
-  //}
-  //for(int i=1; i < NUM; i++)
-  //fout_o << jointTorque[i] << "\t";
-  //fout_o << endl;
-
   fout_m.close();
   fout_o.close();
 }
@@ -321,14 +282,6 @@ int main (int argc, char *argv[])
   for(int i=0; i < NUM_j; i++)
     jointTorque[i] = atof(argv[i + 1]);
   DirName = atoi(argv[NUM_j + 1]);
-
-  //if ( argc != (NUM + 1)){
-  //printf("error: input 4 values!: three joint torque and directory name\n");
-  //return 0;
-  //}
-  //for(int i=1; i < NUM; i++)
-  //jointTorque[i] = atof(argv[i]);
-  //DirName = atoi(argv[NUM]);
 
   // initiation
   dInitODE();
@@ -346,7 +299,6 @@ int main (int argc, char *argv[])
 
   // loop
   //dsSimulationLoop (argc, argv, 640, 480, &fn);
-  //while(1) 
   for (int i = 0; i < Num_t; i++) 
     simLoop(0);
 
